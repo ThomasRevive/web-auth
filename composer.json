@@ -1,0 +1,5 @@
+{
+    "require": {
+        "selective/base32": "^2.0"
+    }
+}
