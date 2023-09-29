@@ -1,21 +1,41 @@
 <?php
 
-require_once(__DIR__ . '/vendor/autoload.php');
-require_once(__DIR__ . '/classes/Authenticator.php');
+require_once(__DIR__ . '/autoload.php');
 
-$authenticator = new Authenticator();
+// $authenticator = new Authenticator();
 
-$optUrl = $authenticator->generateOPTCode('AuthTesting', 'Thomas');
-$qrCodeUrl = $authenticator->generateQrCode($optUrl);
+// $optUrl = $authenticator->generateOPTCode('AuthTesting', 'Thomas');
+// $qrCodeUrl = $authenticator->generateQrCode($optUrl);
 
 if (!empty($_POST)) {
-    $authCode = $_POST['auth_code'];
+    if (!empty($_POST['generate_user'])) {
+        $user = new User();
 
-    if ($authenticator->verifyAuthCode($authCode)) {
-        echo 'code works';
+        $newUser = $user->create($_POST['username']);
+
+        if ($newUser) {
+            echo 'User created';
+        }
+        else {
+            echo 'User failed to create';
+        }
     }
-    else {
-        echo 'invalid code';
+    else if (!empty($_POST['verify_user'])) {
+        $authCode = $_POST['auth_code'];
+
+        $user = new User();
+        $userData = $user->get($_POST['username']);
+
+        // $authenticator = new Authenticator($userData['2fa_secret']);
+
+        $token = EAMann\TOTP\Key::import($userData['2fa_secret']);
+
+        // if ($authenticator->verifyAuthCode($authCode)) {
+        if (EAMann\TOTP\is_valid_authcode($token, $authCode)) {
+            echo 'Code works';
+        } else {
+            echo 'Invalid code';
+        }
     }
 }
 
@@ -26,20 +46,34 @@ if (!empty($_POST)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Auth Test</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/assets/js/auth.js" type="text/javascript"></script>
 </head>
 <body>
-    <h4>QR Code</h4>
+    <h4>Generate User</h4>
 
-    <div class="qr-code">
-        <img src="<?php echo $qrCodeUrl; ?>" />
-    </div>
+    <form action="" method="post">
+        <input type="text" name="username" placeholder="Username" />
+        <input type="submit" name="generate_user" value="Generate" />
+    </form>
+
+    <h4>Get QR Code</h4>
+
+    <form action="" method="post" id="qr_code_form">
+        <input type="text" name="username" placeholder="Username" />
+        <input type="submit" name="get_qr_code" value="Get QR Code" />
+    </form>
+
+    <div class="qr-code-container"></div>
 
     <h4>Verify Code</h4>
 
     <form action="" method="post">
-        <input type="text" name="auth_code" />
-        <input type="submit" value="Verify" />
+        <input type="text" name="username" placeholder="Username" />
+        <input type="text" name="auth_code" placeholder="OPT" />
+        <input type="submit" name="verify_user" value="Verify" />
     </form>
 </body>
 </html>

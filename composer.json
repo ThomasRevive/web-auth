@@ -1,5 +1,8 @@
 {
     "require": {
-        "selective/base32": "^2.0"
+        "selective/base32": "^2.0",
+        "vlucas/phpdotenv": "^5.5",
+        "ericmann/totp": "^2.0",
+        "robthree/twofactorauth": "^2.0"
     }
 }

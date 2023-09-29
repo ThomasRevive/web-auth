@@ -4,17 +4,26 @@ use Selective\Base32\Base32;
 class Authenticator {
     private $bytes;
 
-    public function __construct($length = 16) {
-        $this->bytes = random_bytes($length);
+    public function __construct($secret = null, $length = 16) {
+        if (!empty($secret)) {
+            $base32 = new Base32();
+            $this->bytes = $base32->decode($secret);
+        }
+        else {
+            $this->bytes = random_bytes($length);
+        }
+    }
+
+    public function generateSecret() {
+        $base32 = new Base32();
+        return $base32->encode($this->bytes);
     }
 
     public function generateOPTCode($site, $user) {
-        $base32 = new Base32();
-        $encoded = $base32->encode($this->bytes);
-
+        $secret = $this->generateSecret();
         $name = "{$site}:{$user}";
 
-        $auth_url = urlencode('otpauth://totp/' . $name . '?secret=' . $encoded);
+        $auth_url = urlencode('otpauth://totp/' . $name . '?secret=' . $secret);
         $auth_url .= urlencode('&issuer=' . urlencode($site));
 
         return $auth_url;
@@ -33,12 +42,23 @@ class Authenticator {
         return $base32->decode($base32->encode($this->bytes));
     }
 
-    private function calculateTOTP($stepCount, $digits, $timeStep) {
+    private function calculateTOTP($stepCount = false, $digits = 6, $timeStep = 30) {
+        // echo $this->getSecret() . '<br/>';
+        // echo $this->bytes . '<br/>';
+
+        $timeStep = intval($timeStep);
+
+        if ($stepCount === false) {
+            $stepCount = floor(time() / $timeStep);
+        }
+
         // SHA256 is 32 in length
-        $paddedSecret = str_pad($this->getSecret(), 32, STR_PAD_RIGHT);
+        $secret = str_pad($this->getSecret(), intval(32), STR_PAD_RIGHT);
+
+        echo $secret . '<br/>';
 
         $timestamp = pack('J', $stepCount);
-        $hash = hash_hmac('sha256', $timestamp, $paddedSecret, true);
+        $hash = hash_hmac('sha256', $timestamp, $secret, true);
         $offset = ord($hash[strlen($hash) - 1]) & 0xf;
         $code = (
             ((ord($hash[$offset + 0]) & 0x7f) << 24) |
@@ -54,6 +74,9 @@ class Authenticator {
         $timeStep = 30;
         $maxTicks = 4;
 
+        echo $authCode . '<br/><br/>';
+
+        // Array of all ticks to allow, sorted using absolute value to test closest match first.
         $ticks = range(-$maxTicks, $maxTicks);
         usort($ticks, function ($a, $b) {
             $a = abs($a);
@@ -70,7 +93,11 @@ class Authenticator {
         foreach ($ticks as $offset) {
             $logTime = $time + $offset;
 
-            if ($this->calculateTOTP($logTime, $digits, $timeStep) === $authCode) {
+            $calc = $this->calculateTOTP($logTime, $digits, $timeStep);
+
+            echo $calc . '<br/>';
+
+            if ($calc === $authCode) {
                 return true;
             }
         }
