@@ -1,11 +1,11 @@
 <?php
 
+use RobThree\Auth\TwoFactorAuth;
+
 class User extends Model {
     public function create($username) {
-        // $authenticator = new Authenticator();
-        // $secret = $authenticator->generateSecret();
-
-        $secret = new EAMann\TOTP\Key();
+        $tfa = new TwoFactorAuth();
+        $secret = $tfa->createSecret();
 
         $dt = new \DateTime();
         $userDateTime = $dt->format('Y-m-d H:i:s');

@@ -1,11 +1,7 @@
 <?php
+use RobThree\Auth\TwoFactorAuth;
 
 require_once(__DIR__ . '/autoload.php');
-
-// $authenticator = new Authenticator();
-
-// $optUrl = $authenticator->generateOPTCode('AuthTesting', 'Thomas');
-// $qrCodeUrl = $authenticator->generateQrCode($optUrl);
 
 if (!empty($_POST)) {
     if (!empty($_POST['generate_user'])) {
@@ -26,12 +22,9 @@ if (!empty($_POST)) {
         $user = new User();
         $userData = $user->get($_POST['username']);
 
-        // $authenticator = new Authenticator($userData['2fa_secret']);
+        $tfa = new TwoFactorAuth();
 
-        $token = EAMann\TOTP\Key::import($userData['2fa_secret']);
-
-        // if ($authenticator->verifyAuthCode($authCode)) {
-        if (EAMann\TOTP\is_valid_authcode($token, $authCode)) {
+        if ($tfa->verifyCode($userData['2fa_secret'], $authCode)) {
             echo 'Code works';
         } else {
             echo 'Invalid code';
